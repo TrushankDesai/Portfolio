@@ -1,0 +1,288 @@
+SELECT
+  *
+FROM
+  tutorial.crunchbase_companies
+
+
+SELECT
+  count(acqu.*),
+  count(comp.*)
+FROM
+  tutorial.crunchbase_acquisitions Acqu
+  LEFT JOIN tutorial.crunchbase_companies comp ON acqu.company_name = comp.name
+
+
+SELECT
+  count(DISTINCT Comp.name) AS name_count,
+  count(DISTINCT acqu.company_state_code)
+FROM
+  tutorial.crunchbase_acquisitions Acqu
+  LEFT JOIN tutorial.crunchbase_companies comp ON acqu.company_name = comp.name
+ORDER BY
+  Acqu.company_name DESC
+
+
+
+SELECT
+  comp.permalink,
+  comp.status,
+  count(DISTINCT inves.investor_permalink) AS distinct_invsetor
+FROM
+  tutorial.crunchbase_companies comp
+  LEFT JOIN tutorial.crunchbase_investments inves ON comp.name = inves.company_name
+WHERE
+  comp.state_code = 'NY'
+GROUP BY
+  comp.permalink,
+  comp.status
+ORDER BY
+  count(DISTINCT inves.investor_permalink) DESC
+
+
+
+SELECT
+  investor_name,
+  count(DISTINCT company_permalink) AS no_investments
+FROM
+  tutorial.crunchbase_companies comp
+  LEFT JOIN tutorial.crunchbase_investments inves ON comp.name = inves.company_name
+GROUP BY
+  investor_name
+ORDER BY
+  count(DISTINCT company_permalink) DESC
+
+
+
+SELECT
+  comp.permalink,
+  comp.status,
+  count(DISTINCT inves.investor_permalink) AS distinct_invsetor
+FROM
+  tutorial.crunchbase_companies comp
+  RIGHT JOIN tutorial.crunchbase_investments inves ON comp.name = inves.company_name
+WHERE
+  comp.state_code = 'NY'
+GROUP BY
+  comp.permalink,
+  comp.status
+ORDER BY
+  count(DISTINCT inves.investor_permalink) DESC
+
+
+
+SELECT
+  *
+FROM
+  tutorial.crunchbase_companies comp FULL
+  JOIN tutorial.crunchbase_investments_part1 part1 ON comp.permalink = part1.company_permalink
+LIMIT
+  50
+
+
+
+SELECT
+  company_permalink,
+  company_name,
+  investor_name
+FROM
+  tutorial.crunchbase_investments_part1
+WHERE
+  company_name Ilike 'T%'
+UNION
+ALL
+
+
+
+SELECT
+  company_permalink,
+  company_name,
+  investor_name
+FROM
+  tutorial.crunchbase_investments_part2
+WHERE
+  company_name Ilike 'M%'
+
+
+
+SELECT
+  'INVESTMENT PART 1' AS DATA_SET,
+  COMP.STATUS,
+  COUNT(DISTINCT investor_permalink) AS NO_OF_INVESTMENTS
+FROM
+  tutorial.crunchbase_investments_part1 part1
+  LEFT JOIN tutorial.crunchbase_companies comp ON comp.permalink = part1.company_permalink
+GROUP BY
+  STATUS,
+  DATA_SET
+UNION
+ALL
+
+
+
+SELECT
+  'INVESTMENT PART 2' AS DATA_SET,
+  COMP.STATUS,
+  COUNT(DISTINCT investor_permalink) AS NO_OF_INVESTMENTS
+FROM
+  tutorial.crunchbase_investments_part2 part2
+  LEFT JOIN tutorial.crunchbase_companies comp ON comp.permalink = part2.company_permalink
+GROUP BY
+  STATUS,
+  DATA_SET
+
+
+
+SELECT
+  companies.permalink,
+  companies.name,
+  companies.status,
+  COUNT(investments.investor_permalink) AS investors
+FROM
+  tutorial.crunchbase_companies companies
+  LEFT JOIN tutorial.crunchbase_investments_part1 investments ON companies.permalink = investments.company_permalink
+  AND investments.funded_year > companies.founded_year + 5
+GROUP BY
+  1,
+  2,
+  3
+
+
+
+SELECT
+  companies.permalink,
+  companies.name,
+  companies.status,
+  COUNT(investments.investor_permalink) AS investors
+FROM
+  tutorial.crunchbase_companies companies
+  LEFT JOIN tutorial.crunchbase_investments_part1 investments ON companies.permalink = investments.company_permalink
+WHERE
+  investments.funded_year > companies.founded_year + 5
+GROUP BY
+  1,
+  2,
+  3
+
+
+
+SELECT
+  companies.permalink,
+  companies.name,
+  investments.company_name,
+  investments.company_permalink
+FROM
+  tutorial.crunchbase_companies companies
+  LEFT JOIN tutorial.crunchbase_investments_part1 investments ON companies.permalink = investments.company_permalink
+  AND companies.name = investments.company_name
+
+
+
+SELECT
+  DISTINCT japan_investments.company_name,
+  japan_investments.company_permalink
+FROM
+  tutorial.crunchbase_investments_part1 japan_investments
+  JOIN tutorial.crunchbase_investments_part1 gb_investments ON japan_investments.company_name = gb_investments.company_name
+  AND gb_investments.investor_country_code = 'GBR'
+  AND gb_investments.funded_at > japan_investments.funded_at
+WHERE
+  japan_investments.investor_country_code = 'JPN'
+ORDER BY
+  1
+
+
+
+SELECT
+  cast(funding_total_usd AS varchar(100)),
+  cast(founded_at_clean AS varchar(100))
+FROM
+  tutorial.crunchbase_companies_clean_date
+
+
+SELECT
+  companies.permalink,
+  companies.founded_at_clean,
+  acquisitions.acquired_at_cleaned,
+  acquisitions.acquired_at_cleaned - companies.founded_at_clean :: timestamp AS time_to_acquisition
+FROM
+  tutorial.crunchbase_companies_clean_date companies
+  JOIN tutorial.crunchbase_acquisitions_clean_date acquisitions ON acquisitions.company_permalink = companies.permalink
+WHERE
+  founded_at_clean IS NOT NULL
+
+
+
+SELECT
+  companies.permalink,
+  companies.founded_at_clean,
+  companies.founded_at_clean :: timestamp + INTERVAL '1 week' AS plus_one_week
+FROM
+  tutorial.crunchbase_companies_clean_date companies
+WHERE
+  founded_at_clean IS NOT NULL.
+
+
+
+SELECT
+  comp.category_code,
+  count(
+    CASE
+      WHEN acqu.acquired_at_cleaned <= comp.founded_at_clean :: timestamp + INTERVAL '3 years' THEN 1
+      ELSE NULL
+    END
+  ) AS Acq_3_years,
+  count(
+    CASE
+      WHEN acqu.acquired_at_cleaned <= comp.founded_at_clean :: timestamp + INTERVAL '5 years' THEN 1
+      ELSE NULL
+    END
+  ) AS Acq_5_years,
+  count(
+    CASE
+      WHEN acqu.acquired_at_cleaned <= comp.founded_at_clean :: timestamp + INTERVAL '10 years' THEN 1
+      ELSE NULL
+    END
+  ) AS Acq_10_years,
+  count(1) AS total
+FROM
+  tutorial.crunchbase_companies_clean_date comp
+  JOIN tutorial.crunchbase_acquisitions_clean_date acqu ON acqu.company_permalink = comp.permalink
+WHERE
+  founded_at_clean IS NOT NULL
+GROUP BY
+  1
+ORDER BY
+  5 DESC
+
+
+
+SELECT
+  companies.category_code,
+  COUNT(
+    CASE
+      WHEN acquisitions.acquired_at_cleaned <= companies.founded_at_clean :: timestamp + INTERVAL '3 years' THEN 1
+      ELSE NULL
+    END
+  ) AS acquired_3_yrs,
+  COUNT(
+    CASE
+      WHEN acquisitions.acquired_at_cleaned <= companies.founded_at_clean :: timestamp + INTERVAL '5 years' THEN 1
+      ELSE NULL
+    END
+  ) AS acquired_5_yrs,
+  COUNT(
+    CASE
+      WHEN acquisitions.acquired_at_cleaned <= companies.founded_at_clean :: timestamp + INTERVAL '10 years' THEN 1
+      ELSE NULL
+    END
+  ) AS acquired_10_yrs,
+  COUNT(1) AS total
+FROM
+  tutorial.crunchbase_companies_clean_date companies
+  JOIN tutorial.crunchbase_acquisitions_clean_date acquisitions ON acquisitions.company_permalink = companies.permalink
+WHERE
+  founded_at_clean IS NOT NULL
+GROUP BY
+  1
+ORDER BY
+  5 DESC
